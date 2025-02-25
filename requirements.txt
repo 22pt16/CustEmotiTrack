@@ -1,0 +1,25 @@
+# Streamlit for UI
+streamlit
+
+# NLP & Text Processing
+transformers
+torch
+sentence-transformers
+scikit-learn
+nltk
+spacy
+pandas
+numpy
+
+# Topic Modeling
+bertopic
+faiss-cpu  # For efficient similarity search
+
+# Sentiment & Emotion Analysis
+vaderSentiment
+textblob
+
+# Miscellaneous
+tqdm
+matplotlib
+seaborn
