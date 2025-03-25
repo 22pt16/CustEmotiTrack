@@ -2,4 +2,4 @@ datasets/
 /models/emotion_model.pt
 emotion_model.pt
 gdrive_auth.py
-tokenizer/
+tokenizer/"config/service_account.json" 
