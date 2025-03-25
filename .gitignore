@@ -1,5 +1,5 @@
 datasets/
-models/emotion_model.pt
+/models/emotion_model.pt
 emotion_model.pt
 gdrive_auth.py
 tokenizer/
