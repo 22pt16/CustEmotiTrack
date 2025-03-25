@@ -1,49 +1,20 @@
 import torch
 import json
-import os
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-import torch
-import requests
+import os
 
-
-# ✅ Define Local Paths
-MODEL_DIR = "models"
-MODEL_FILENAME = "emotion_model.pt"
-TOKENIZER_DIR = "tokenizer"
-
-# ✅ Load Model & Tokenizer Locally
-MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
-TOKENIZER_PATH = os.path.join(MODEL_DIR, TOKENIZER_DIR)
-
+# ✅ Load Model Directly from Hugging Face
 MODEL_NAME = "joeddav/distilbert-base-uncased-go-emotions-student"
-HF_MODEL_URL = "https://huggingface.co/22PT16/emotion_detection/resolve/main/emotion_model.pt"
-HF_TOKENIZER_URL = "https://huggingface.co/22PT16/emotion_detection/"
 
-# ✅ Check if Local Model Exists, Else Download from Hugging Face
-if not os.path.exists(MODEL_PATH):
-    print("⏬ Model not found locally. Downloading from Hugging Face...")
-    os.makedirs(MODEL_DIR, exist_ok=True)
-    response = requests.get(HF_MODEL_URL)
-    if response.status_code == 200:
-        with open(MODEL_PATH, "wb") as f:
-            f.write(response.content)
-        print("✅ Model successfully downloaded and saved to models/emotion_model.pt!")
-    else:
-        raise Exception(f"❌ Failed to download model. HTTP Status: {response.status_code}")
-
-# Load Tokenizer
-tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
-
-# Load Model
+# ✅ Load Tokenizer and Model from Hugging Face (No Local Download)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
-model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device("cpu")))
-model.eval()
 
 # ✅ Move Model to GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
-print("✅ Model and Tokenizer Loaded Successfully from Local Storage!")
+print("✅ Model and Tokenizer Loaded Successfully from Hugging Face!")
 
 # ✅ Emotion Labels
 EMOTIONS = [
@@ -68,7 +39,8 @@ def predict_emotions(text):
         outputs = model(**inputs)
 
     logits = outputs.logits.squeeze(0).cpu().numpy()  # Extract logits and move to CPU
-    scores = torch.nn.functional.softmax(outputs.logits,dim=-1).cpu().numpy().flatten()
+    scores = torch.nn.functional.softmax(outputs.logits, dim=-1).cpu().numpy().flatten()
+
     # Normalize logits for intensity calculation
     min_logit, max_logit = logits.min(), logits.max()
     if max_logit == min_logit:  # Prevent division by zero
@@ -84,7 +56,6 @@ def predict_emotions(text):
     top_2 = sorted_emotions[:2]
     idx_1 = EMOTIONS.index(top_2[0][0])
     idx_2 = EMOTIONS.index(top_2[1][0])
-
 
     result = {
         "emotions": {
@@ -105,6 +76,5 @@ def predict_emotions(text):
             "overall": round((top_2[0][1] + top_2[1][1]) * 50, 2)  # Adorescore formula
         }
     }
-
 
     return result
