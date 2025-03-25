@@ -3,6 +3,7 @@ import json
 import os
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
+import requests
 
 
 # ✅ Define Local Paths
@@ -15,6 +16,20 @@ MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
 TOKENIZER_PATH = os.path.join(MODEL_DIR, TOKENIZER_DIR)
 
 MODEL_NAME = "joeddav/distilbert-base-uncased-go-emotions-student"
+HF_MODEL_URL = "https://huggingface.co/22PT16/emotion_detection/resolve/main/emotion_model.pt"
+HF_TOKENIZER_URL = "https://huggingface.co/22PT16/emotion_detection/"
+
+# ✅ Check if Local Model Exists, Else Download from Hugging Face
+if not os.path.exists(MODEL_PATH):
+    print("⏬ Model not found locally. Downloading from Hugging Face...")
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    response = requests.get(HF_MODEL_URL)
+    if response.status_code == 200:
+        with open(MODEL_PATH, "wb") as f:
+            f.write(response.content)
+        print("✅ Model successfully downloaded and saved to models/emotion_model.pt!")
+    else:
+        raise Exception(f"❌ Failed to download model. HTTP Status: {response.status_code}")
 
 # Load Tokenizer
 tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
@@ -93,10 +108,3 @@ def predict_emotions(text):
 
 
     return result
-'''
-# ✅ Example Prediction
-if __name__ == "__main__":
-    sample_text = "Decent good but bad service!"
-    prediction = predict_emotions(sample_text)
-    print(json.dumps(prediction, indent=4))  # Pretty print the result
-'''
