@@ -1,91 +1,102 @@
 import torch
-import numpy as np
 import json
+import os
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
+import torch
 
-# Load Pretrained DistilBERT Model for Emotion Detection
+
+# ✅ Define Local Paths
+MODEL_DIR = "models"
+MODEL_FILENAME = "emotion_model.pt"
+TOKENIZER_DIR = "tokenizer"
+
+# ✅ Load Model & Tokenizer Locally
+MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
+TOKENIZER_PATH = os.path.join(MODEL_DIR, TOKENIZER_DIR)
+
 MODEL_NAME = "joeddav/distilbert-base-uncased-go-emotions-student"
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+
+# Load Tokenizer
+tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
+
+# Load Model
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
+model.load_state_dict(torch.load(MODEL_PATH, map_location=torch.device("cpu")))
 model.eval()
 
-# Move model to GPU if available
+# ✅ Move Model to GPU if available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
-# Define Emotion Labels
+print("✅ Model and Tokenizer Loaded Successfully from Local Storage!")
+
+# ✅ Emotion Labels
 EMOTIONS = [
     "admiration", "amusement", "anger", "annoyance", "approval", "caring", "confusion", "curiosity", "desire",
     "disappointment", "disapproval", "disgust", "embarrassment", "excitement", "fear", "gratitude", "grief", "joy",
     "love", "nervousness", "optimism", "pride", "realization", "relief", "remorse", "sadness", "surprise", "neutral"
 ]
 
-# Define Positive & Negative Emotion Sets for Adorescore
-POSITIVE_EMOTIONS = {"admiration", "amusement", "approval", "caring", "excitement", "gratitude", "joy", "love", "optimism", "pride", "relief"}
-NEGATIVE_EMOTIONS = {"anger", "annoyance", "disappointment", "disapproval", "disgust", "embarrassment", "fear", "grief", "nervousness", "remorse", "sadness"}
+# ✅ Activation Levels Mapping
+def get_activation_level(intensity):
+    if intensity >= 0.8:
+        return "High"
+    elif intensity >= 0.3:
+        return "Medium"
+    else:
+        return "Low"
 
-# Function to Predict Emotion Scores
-def predict_sentiment(text):
+# ✅ Prediction Function
+def predict_emotions(text):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True).to(device)
     with torch.no_grad():
         outputs = model(**inputs)
-    scores = torch.sigmoid(outputs.logits).cpu().numpy().flatten()
-    return {EMOTIONS[i]: float(scores[i]) for i in range(len(EMOTIONS))}  # Ensure conversion to Python float
 
-# Function to Determine Activation Level
-def determine_activation(intensity):
-    if intensity < 0.4:
-        return "Low"
-    elif intensity < 0.7:
-        return "Medium"
+    logits = outputs.logits.squeeze(0).cpu().numpy()  # Extract logits and move to CPU
+    scores = torch.nn.functional.softmax(outputs.logits,dim=-1).cpu().numpy().flatten()
+    # Normalize logits for intensity calculation
+    min_logit, max_logit = logits.min(), logits.max()
+    if max_logit == min_logit:  # Prevent division by zero
+        intensity_scores = [0] * len(logits)
     else:
-        return "High"
+        intensity_scores = [(logits[i] - min_logit) / (max_logit - min_logit) for i in range(len(logits))]
 
-# Function to Get Primary & Secondary Emotions
-def get_primary_secondary_emotions(sentiment_scores):
+    # Convert to JSON format
+    sentiment_scores = {EMOTIONS[i]: float(scores[i]) for i in range(len(EMOTIONS))}
     sorted_emotions = sorted(sentiment_scores.items(), key=lambda x: x[1], reverse=True)
-    primary_intensity = round(float(sorted_emotions[0][1]), 2)
-    secondary_intensity = round(float(sorted_emotions[1][1]), 2)
-    
-    primary = {
-        "emotion": sorted_emotions[0][0], 
-        "activation": determine_activation(primary_intensity), 
-        "intensity": primary_intensity
-    }
-    secondary = {
-        "emotion": sorted_emotions[1][0], 
-        "activation": determine_activation(secondary_intensity), 
-        "intensity": secondary_intensity
-    }
-    return primary, secondary
 
-# Function to Calculate Adorescore
-def calculate_adorescore(sentiment_scores):
-    pos_sum = sum(sentiment_scores[e] for e in POSITIVE_EMOTIONS if e in sentiment_scores)
-    neg_sum = sum(sentiment_scores[e] for e in NEGATIVE_EMOTIONS if e in sentiment_scores)
-    adorescore = 100 * (pos_sum - neg_sum) / (pos_sum + neg_sum + 1e-6)
-    return round(float(adorescore), 2)  # Convert to Python float and round
+    # Select Top 2 Emotions
+    top_2 = sorted_emotions[:2]
+    idx_1 = EMOTIONS.index(top_2[0][0])
+    idx_2 = EMOTIONS.index(top_2[1][0])
 
-# Function to Get Emotion JSON Output
-def get_emotion_analysis(text):
-    sentiment_scores = predict_sentiment(text)
-    primary_emotion, secondary_emotion = get_primary_secondary_emotions(sentiment_scores)
-    adorescore = calculate_adorescore(sentiment_scores)
 
-    # Output JSON
-    output_json = {
+    result = {
         "emotions": {
-            "primary": primary_emotion,
-            "secondary": secondary_emotion
+            "primary": {
+                "emotion": top_2[0][0],
+                "activation": get_activation_level(intensity_scores[idx_1]),  # Correct index lookup
+                "intensity": round(float(intensity_scores[idx_1]), 2),
+                "confidence": round(float(top_2[0][1]), 2)  # Confidence from softmax
+            },
+            "secondary": {
+                "emotion": top_2[1][0],
+                "activation": get_activation_level(intensity_scores[idx_2]),  # Correct index lookup
+                "intensity": round(float(intensity_scores[idx_2]), 2),
+                "confidence": round(float(top_2[1][1]), 2)
+            }
         },
         "adorescore": {
-            "overall": adorescore
+            "overall": round((top_2[0][1] + top_2[1][1]) * 50, 2)  # Adorescore formula
         }
     }
-    return output_json
 
-# Example Usage
+
+    return result
+'''
+# ✅ Example Prediction
 if __name__ == "__main__":
-    review = "Fast delivery and great packaging. Highly recommend!"
-    result = get_emotion_analysis(review)
-    print(json.dumps(result, indent=4))  # No need for `default=float`, all values are now standard Python floats
+    sample_text = "Decent good but bad service!"
+    prediction = predict_emotions(sample_text)
+    print(json.dumps(prediction, indent=4))  # Pretty print the result
+'''

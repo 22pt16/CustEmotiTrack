@@ -1,26 +1,23 @@
+import os
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-# ✅ Define Model Name (Pretrained DistilBERT for Emotions)
-MODEL_NAME = "joeddav/distilbert-base-uncased-go-emotions-student"
+# ✅ Define Save Paths
+MODEL_DIR = "models"
+os.makedirs(MODEL_DIR, exist_ok=True)
 
-# ✅ Load Pretrained Model & Tokenizer
+MODEL_NAME = "joeddav/distilbert-base-uncased-go-emotions-student"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
 
-# ✅ Move Model to GPU if available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
+print("✅ Model Loaded")
 
-# ✅ Save Model & Tokenizer
-MODEL_PATH = "models/emotion_model.pt"
-TOKENIZER_PATH = "models/tokenizer"
+# ✅ Save Locally
+MODEL_PATH = os.path.join(MODEL_DIR, "emotion_model.pt")
+TOKENIZER_PATH = os.path.join(MODEL_DIR, "tokenizer")
 
-# Save model state_dict (only model weights)
 torch.save(model.state_dict(), MODEL_PATH)
-
-# Save tokenizer separately
 tokenizer.save_pretrained(TOKENIZER_PATH)
 
-print(f"✅ Model saved at: {MODEL_PATH}")
-print(f"✅ Tokenizer saved at: {TOKENIZER_PATH}")
+print(f"💾 Model saved at: {MODEL_PATH}")
+print(f"💾 Tokenizer saved at: {TOKENIZER_PATH}")

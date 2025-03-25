@@ -1,3 +1,7 @@
+#major
+os
+sys
+
 # Streamlit for UI
 streamlit
 
@@ -20,6 +24,12 @@ vaderSentiment
 textblob
 
 # Miscellaneous
-tqdm
 matplotlib
 seaborn
+
+#Google cloud access
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+deep_translator
