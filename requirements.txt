@@ -12,7 +12,7 @@ pandas
 numpy
 
 # Topic Modeling
-bertopic
+bertopic==0.10.0  # Updated to compatible version
 faiss-cpu  # For efficient similarity search
 
 # Sentiment & Emotion Analysis
