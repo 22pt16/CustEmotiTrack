@@ -1,7 +1,3 @@
-#major
-os
-sys
-
 # Streamlit for UI
 streamlit
 
@@ -27,7 +23,7 @@ textblob
 matplotlib
 seaborn
 
-#Google cloud access
+# Google Cloud Access
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
