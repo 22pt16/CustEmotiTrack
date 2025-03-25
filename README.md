@@ -58,7 +58,30 @@ The architecture consists of several core components:
 - **Output Generation:** JSON response for UI or downstream applications.
 
 ---
+## Project Structure
 
+- **📂 CustEmotiTrack**
+  - **📂 config/**
+  - **📂 datasets/** (Raw & Processed Data)
+  - **📂 evaluation/** (scripts)
+    - `evaluate_emotions.py`
+    - `evaluate_topic.py`
+  - **📂models/** (Trained ML Models)
+    - `emotion_model.pt`
+    - `topic_model.pkl`
+    - **tokenizer/**
+    - `load_model.py` (emotion module)
+    - `load_topic_model.py` (topic module)
+    - `save_model.py`
+    - `save_topic_model.py`
+  - **📂streamlit_app/** (Frontend UI)
+    - `app.py`
+  - `gdrive_auth.py`
+  - `README.md`
+  - `requirements.txt` (Dependencies)
+  - `LICENSE`
+
+---
 ## 🔥 API Specifications
 ### 4.1 **Emotion Detection API**
 - **Endpoint:** `/predict-emotion`
